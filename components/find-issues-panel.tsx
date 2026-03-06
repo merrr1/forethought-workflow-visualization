@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { WorkflowData } from "@/lib/types";
-import { AlertTriangle, CheckCircle, Info, Search, X } from "lucide-react";
+import { AlertTriangle, CheckCircle, Info, MapPin, Search, Wrench, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Drawer } from "vaul";
@@ -14,6 +14,7 @@ import { Drawer } from "vaul";
 interface FindIssuesPanelProps {
   workflow: WorkflowData;
   onIssuesFound?: (nodeIds: string[]) => void;
+  onNavigateToNode?: (nodeId: string) => void;
 }
 
 const severityConfig = {
@@ -43,7 +44,7 @@ const severityConfig = {
   },
 };
 
-export function FindIssuesPanel({ workflow, onIssuesFound }: FindIssuesPanelProps) {
+export function FindIssuesPanel({ workflow, onIssuesFound, onNavigateToNode }: FindIssuesPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [issues, setIssues] = useState<WorkflowIssue[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +57,7 @@ export function FindIssuesPanel({ workflow, onIssuesFound }: FindIssuesPanelProp
       const result = await analyzeWorkflow(workflow);
       setIssues(result);
       const allNodeIds = result.flatMap((i) => i.nodeIds);
+      console.log("[FindIssues] nodeIds to highlight:", allNodeIds);
       onIssuesFound?.(allNodeIds);
     } catch {
       toast.error("Failed to analyze workflow. Please try again.");
@@ -129,6 +131,7 @@ export function FindIssuesPanel({ workflow, onIssuesFound }: FindIssuesPanelProp
                 issues.map((issue, i) => {
                   const config = severityConfig[issue.severity];
                   const { Icon } = config;
+                  const firstNodeId = issue.nodeIds[0];
                   return (
                     <Card
                       key={i}
@@ -155,14 +158,39 @@ export function FindIssuesPanel({ workflow, onIssuesFound }: FindIssuesPanelProp
                         {issue.description}
                       </p>
 
-                      {issue.splitCondition !== "N/A" && (
-                        <p className="text-xs text-slate-400">
-                          Split:{" "}
-                          <span className="font-medium text-slate-500">
-                            {issue.splitCondition}
-                          </span>
-                        </p>
+                      {issue.fix && (
+                        <div className="flex gap-1.5 items-start pt-1 border-t border-slate-100">
+                          <Wrench className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5" />
+                          <p className="text-xs text-slate-500 leading-snug">
+                            {issue.fix}
+                          </p>
+                        </div>
                       )}
+
+                      <div className="flex items-center justify-between pt-1">
+                        {issue.splitCondition !== "N/A" && (
+                          <p className="text-xs text-slate-400">
+                            Split:{" "}
+                            <span className="font-medium text-slate-500">
+                              {issue.splitCondition}
+                            </span>
+                          </p>
+                        )}
+                        {firstNodeId && onNavigateToNode && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs text-slate-500 hover:text-slate-900 ml-auto"
+                            onClick={() => {
+                              onNavigateToNode(firstNodeId);
+                              setIsOpen(false);
+                            }}
+                          >
+                            <MapPin className="h-3 w-3 mr-1" />
+                            Locate in flow
+                          </Button>
+                        )}
+                      </div>
                     </Card>
                   );
                 })

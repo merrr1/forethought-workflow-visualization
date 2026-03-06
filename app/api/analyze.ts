@@ -4,8 +4,6 @@ import OpenAI from "openai";
 import { z } from "zod";
 import type { Transition, WorkflowData } from "@/lib/types";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type SplitPoint = {
@@ -29,6 +27,7 @@ export type WorkflowIssue = {
   severity: "error" | "warning" | "info";
   title: string;
   description: string;
+  fix: string;
   splitCondition: string;
   nodeIds: string[];
 };
@@ -39,6 +38,7 @@ const workflowIssueSchema = z.object({
   severity: z.enum(["error", "warning", "info"]),
   title: z.string(),
   description: z.string(),
+  fix: z.string(),
   splitCondition: z.string(),
   nodeIds: z.array(z.string()),
 });
@@ -216,6 +216,7 @@ function traverseBranch(
 export async function analyzeWorkflow(
   workflow: WorkflowData
 ): Promise<WorkflowIssue[]> {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const splits = detectSplitPoints(workflow.canvas.step_map);
 
   if (splits.length === 0) {
@@ -225,6 +226,7 @@ export async function analyzeWorkflow(
         title: "No QA/PROD splits detected",
         description:
           "No condition step that cleanly splits QA vs PROD was detected.",
+        fix: "Check that your workflow contains a condition step whose transitions reference QA and PROD environments.",
         splitCondition: "N/A",
         nodeIds: [],
       },
@@ -264,11 +266,12 @@ For each issue:
 - severity: "error" for structural mismatches, "warning" for suspicious differences, "info" for minor notes
 - title: short label (max 10 words) that names the affected step by content, not position
 - description: 1-2 sentences using step labels/URLs/messages to clearly explain the problem
+- fix: 1-2 sentences of concrete, actionable steps to resolve the issue directly in Forethought. Be specific — reference the exact branch (QA or PROD), the step type, and what needs to be changed, added, or removed. Example: "In Forethought, open the PROD branch and add a 'flamethrower_api_call' step after 'Check Order Status' matching the QA branch configuration. Set the HTTP method to POST to align with QA."
 - splitCondition: the conditionName of the split where the issue occurs
 - nodeIds: array of step UUIDs (from StepSummary.id fields) involved in the issue
 
 Respond ONLY with valid JSON in this exact shape:
-{ "issues": [ { "severity": "...", "title": "...", "description": "...", "splitCondition": "...", "nodeIds": ["..."] } ] }
+{ "issues": [ { "severity": "...", "title": "...", "description": "...", "fix": "...", "splitCondition": "...", "nodeIds": ["..."] } ] }
 
 If no issues are found, return: { "issues": [] }
 
@@ -293,6 +296,7 @@ ${JSON.stringify(splitPayload, null, 2)}`;
           severity: "warning",
           title: "Analysis failed",
           description: "Failed to parse OpenAI response.",
+          fix: "Try running the analysis again.",
           splitCondition: "N/A",
           nodeIds: [],
         },
@@ -305,6 +309,7 @@ ${JSON.stringify(splitPayload, null, 2)}`;
           severity: "warning",
           title: "Analysis failed",
           description: "Failed to parse OpenAI response.",
+          fix: "Try running the analysis again.",
           splitCondition: "N/A",
           nodeIds: [],
         },
@@ -319,6 +324,7 @@ ${JSON.stringify(splitPayload, null, 2)}`;
         severity: "warning",
         title: "Analysis failed",
         description: message,
+        fix: "Try running the analysis again.",
         splitCondition: "N/A",
         nodeIds: [],
       },

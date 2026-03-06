@@ -1,12 +1,12 @@
 "use client";
 
 import { FindIssuesPanel } from "@/components/find-issues-panel";
-import { WorkflowTree } from "@/components/workflow-tree";
+import { WorkflowTree, type WorkflowTreeHandle } from "@/components/workflow-tree";
 import { Button } from "@/components/ui/button";
 import type { ContextVariables, WorkflowData } from "@/lib/types";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface WorkflowPageClientProps {
   workflow: WorkflowData;
@@ -20,6 +20,7 @@ export function WorkflowPageClient({
   contextVariables,
 }: WorkflowPageClientProps) {
   const [highlightedNodeIds, setHighlightedNodeIds] = useState<string[]>([]);
+  const treeRef = useRef<WorkflowTreeHandle>(null);
 
   return (
     <div className="flex flex-col gap-4 max-h-[calc(100vh-10rem)] overflow-hidden">
@@ -38,6 +39,7 @@ export function WorkflowPageClient({
           <FindIssuesPanel
             workflow={workflow}
             onIssuesFound={setHighlightedNodeIds}
+            onNavigateToNode={(nodeId) => treeRef.current?.navigateTo(nodeId)}
           />
           <Button variant="outline" asChild>
             <Link href="/">
@@ -51,6 +53,7 @@ export function WorkflowPageClient({
       <div className="flex-1 overflow-hidden">
         <div className="max-w-7xl mx-auto h-full">
           <WorkflowTree
+            ref={treeRef}
             workflow={workflow}
             workflowNames={workflowNames}
             contextVariables={contextVariables}
