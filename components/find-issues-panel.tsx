@@ -74,7 +74,7 @@ export function FindIssuesPanel({ workflow, onIssuesFound, onNavigateToNode }: F
 
   return (
     <>
-      <Button variant="outline" onClick={handleFindIssues}>
+      <Button variant="outline" onClick={handleFindIssues} className="border-green-600 bg-green-600 text-white hover:bg-green-700 hover:text-white">
         <Search className="mr-2 h-4 w-4" />
         Find Issues
         {issues !== null && errorCount + warningCount > 0 && (
